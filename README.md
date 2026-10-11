@@ -49,6 +49,8 @@ curl -X POST http://127.0.0.1:8000/seed
 
 # Recompute matches only
 curl -X POST http://127.0.0.1:8000/matches/recompute
+
+# Interactive docs: http://127.0.0.1:8000/docs
 ```
 
 On Windows PowerShell use `curl.exe` instead of `curl`.
