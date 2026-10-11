@@ -20,6 +20,11 @@ def close_pool() -> None:
         _pool.close()
         _pool = None
 
+def get_db() -> Generator[psycopg.Connection, None, None]:
+    pool = get_pool()
+    with pool.connection() as conn:
+        yield conn
+
 @contextmanager
 def get_db_connection(db_url: str | None = None) -> Generator[psycopg.Connection, None, None]:
     target_url = db_url or settings.database_url
