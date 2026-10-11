@@ -85,28 +85,3 @@ score = 0.60 * skill_overlap + 0.25 * experience_fit
 - **Tie-breaks.** Job to candidates: score, then availability, then experience, then candidate id. Candidate to jobs: score, then skill overlap, then job minimum experience, then job id. Each ordering is deterministic.
 
 **Where the work happens.** Counts (matched skills, required skills, matched culture keywords, and the matched names for the reason string) are computed in SQL with one correlated subquery per count. I avoided a single multi-join `GROUP BY` because each one-to-many join multiplies rows. Python only applies the weights and builds the reason text. Matches are precomputed into the `matches` table when seeding or on `POST /matches/recompute`. Reads are then simple indexed queries. The cost is staleness: if candidate or job data changes outside those endpoints, matches must be recomputed.
-
-**Known limitations**
-- Culture matching is exact string equality, so a keyword like `fast-paced` never matches any trait. A synonym map or embeddings would be the next step.
-- Skills are a flat set: no proficiency levels, no skill synonyms.
-- Seeding upserts by name/title and refreshes child rows, but does not delete candidates or jobs that were removed from the JSON file.
-- There are no automated tests yet. I verified the scoring by hand and against the database (Sherlock 0.95 and Sheldon 0.50 for Backend Detective).
-
-## Part 2: SQL Detective
-
-The dataset is loaded as-is into its own `hiring_ops` schema so it stays independent of Part 1.
-
-```bash
-docker compose cp app/db/hiring_ops_setup.sql postgres:/tmp/setup.sql
-docker compose exec postgres psql -U postgres -d rflow -f /tmp/setup.sql
-
-docker compose cp sql_detective.sql postgres:/tmp/detective.sql
-docker compose exec postgres psql -U postgres -d rflow -f /tmp/detective.sql
-```
-
-Answers are in `sql_detective.sql`, one query per question. Judgement calls:
-
-- **Q2:** "reached Final" means a Final interview row exists, whatever the outcome. A LEFT JOIN keeps postings with zero.
-- **Q3:** the same person can have several applicant ids (Ananya Rao, emails differing only by case). Identity is `LOWER(email)`, and "applied to a posting" means having an interview for it.
-- **Q4:** conversion = passed Finals / total Finals, with `HAVING COUNT(*) >= 3`.
-- **Q5:** `RANK() OVER (PARTITION BY department ...)` so ties are kept.
